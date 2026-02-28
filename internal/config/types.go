@@ -49,11 +49,30 @@ type UploadConfig struct {
 }
 
 type MaintenanceConfig struct {
-	Enabled bool
+	Enabled             bool
+	IntervalHours       float64
+	RetentionSentDays   int
+	RetentionFailedDays int
+	RetentionQueueDays  int
+	MaxDBMB             int
+	MaxUploadRows       int
+	FirstRunPreview     bool
+	VacuumCooldownHours float64
+	VacuumMinReclaimMB  int
 }
 
 type MCPConfig struct {
-	Enabled bool
-	Host    string
-	Port    int
+	Enabled             bool
+	Host                string
+	Port                int
+	Token               string
+	AllowRoots          []string
+	ControlDB           string
+	EventRetentionHours float64
+	MaxConcurrentJobs   int
+	EnableSSE           bool
+	AllowedOrigins      []string
 }
+
+// ResolvedConfig is the fully merged runtime configuration.
+type ResolvedConfig = Config
