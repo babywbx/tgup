@@ -30,6 +30,18 @@ func (e ValidationError) Error() string {
 	return fmt.Sprintf("%s %s", e.Field, e.Err)
 }
 
+// ValidateTelegram checks only Telegram auth configuration fields.
+func ValidateTelegram(cfg Config) error {
+	errs := make([]error, 0, 2)
+	if cfg.Telegram.APIID == 0 {
+		errs = append(errs, ValidationError{Field: "telegram.api_id", Err: errMissingAPIID})
+	}
+	if cfg.Telegram.APIHash == "" {
+		errs = append(errs, ValidationError{Field: "telegram.api_hash", Err: errMissingAPIHash})
+	}
+	return errors.Join(errs...)
+}
+
 // Validate checks basic configuration invariants.
 func Validate(cfg Config) error {
 	errs := make([]error, 0)

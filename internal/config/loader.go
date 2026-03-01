@@ -121,6 +121,40 @@ func defaultConfigPaths(homeDir string, cwd string) []string {
 	}
 }
 
+// ResolveTelegramOnly loads config layers but only validates Telegram fields.
+// Used by commands (like login) that don't need scan/upload/etc config.
+func ResolveTelegramOnly(configPath string, cli Overlay) (Config, error) {
+	return resolveTelegramOnly(configPath, cli, os.LookupEnv, os.UserHomeDir, os.Getwd)
+}
+
+func resolveTelegramOnly(
+	configPath string,
+	cli Overlay,
+	lookupEnv lookupEnvFn,
+	homeDirFn func() (string, error),
+	getwdFn func() (string, error),
+) (Config, error) {
+	files, err := loadResolvedConfigFiles(configPath, homeDirFn, getwdFn)
+	if err != nil {
+		return Config{}, err
+	}
+	envCfg, err := loadEnv(lookupEnv)
+	if err != nil {
+		return Config{}, err
+	}
+	overlays := make([]Overlay, 0, len(files)+2)
+	for _, file := range files {
+		overlays = append(overlays, file.Overlay)
+	}
+	overlays = append(overlays, envCfg, cli)
+	cfg := Merge(Default(), overlays...)
+	// Only validate Telegram fields.
+	if err := ValidateTelegram(cfg); err != nil {
+		return Config{}, fmt.Errorf("validate config: %w", err)
+	}
+	return cfg, nil
+}
+
 func loadFileIfExists(path string) (LoadedConfig, bool, error) {
 	_, err := os.Stat(path)
 	if err != nil {
