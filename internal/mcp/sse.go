@@ -19,9 +19,9 @@ const (
 
 // SSEHandler manages Server-Sent Events connections.
 type SSEHandler struct {
-	events     EventStore
-	authToken  string
-	connCount  atomic.Int32
+	events    EventStore
+	authToken string
+	connCount atomic.Int32
 }
 
 // NewSSEHandler creates an SSE handler.

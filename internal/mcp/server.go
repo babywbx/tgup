@@ -12,10 +12,10 @@ const mcpVersion = "0.2.0"
 
 // MCPServer is the core MCP server coordinating events, jobs, and tools.
 type MCPServer struct {
-	events  EventStore
-	jobs    *JobManager
-	bridge  *Bridge
-	config  Config
+	events EventStore
+	jobs   *JobManager
+	bridge *Bridge
+	config Config
 
 	sessionMu sync.RWMutex
 	sessions  map[string]time.Time

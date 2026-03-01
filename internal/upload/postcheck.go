@@ -8,8 +8,8 @@ import (
 
 // PostcheckResult holds validation results after Telegram upload.
 type PostcheckResult struct {
-	OK       bool
-	Issues   []string
+	OK     bool
+	Issues []string
 }
 
 // PostcheckMessages validates the Telegram response against expectations.

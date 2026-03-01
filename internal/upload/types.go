@@ -44,12 +44,12 @@ type Config struct {
 
 // Snapshot reports progress at a point in time.
 type Snapshot struct {
-	SentBytes  int64
-	TotalBytes int64
-	SentFiles  int
-	TotalFiles int
-	SentAlbums int
-	TotalAlbums int
+	SentBytes    int64
+	TotalBytes   int64
+	SentFiles    int
+	TotalFiles   int
+	SentAlbums   int
+	TotalAlbums  int
 	FailedAlbums int
 	CurrentLabel string
 }

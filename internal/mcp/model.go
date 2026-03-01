@@ -96,7 +96,7 @@ type RunStartInput struct {
 // RunSyncInput is the input for tgup.run.sync.
 type RunSyncInput struct {
 	RunSpec    RunSpec `json:"runSpec"`
-	TimeoutSec int    `json:"timeoutSec,omitempty"`
+	TimeoutSec int     `json:"timeoutSec,omitempty"`
 }
 
 // RunStatusInput is the input for tgup.run.status.

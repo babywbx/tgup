@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gotd/td/tgerr"
 	tdtg "github.com/gotd/td/tg"
+	"github.com/gotd/td/tgerr"
 )
 
 // SendCode sends a verification code to the given phone number.

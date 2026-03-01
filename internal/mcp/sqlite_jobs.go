@@ -19,13 +19,13 @@ type JobRunner func(ctx context.Context, spec RunSpec, emit func(Event)) (*RunRe
 // JobManager manages MCP job lifecycle with SQLite persistence and
 // semaphore-based concurrency control.
 type JobManager struct {
-	db        *sql.DB
-	events    EventStore
-	sem       chan struct{}
-	mu        sync.RWMutex
-	cancels   map[string]context.CancelFunc
-	waiters   map[string][]chan struct{}
-	maxQueue  int
+	db       *sql.DB
+	events   EventStore
+	sem      chan struct{}
+	mu       sync.RWMutex
+	cancels  map[string]context.CancelFunc
+	waiters  map[string][]chan struct{}
+	maxQueue int
 }
 
 // JobManagerConfig configures the job manager.
