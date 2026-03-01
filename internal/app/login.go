@@ -118,27 +118,49 @@ func loginWithCode(ctx context.Context, client *tg.GotdClient, opts LoginOptions
 func loginWithQR(ctx context.Context, client *tg.GotdClient, stdout io.Writer) error {
 	qr, err := client.StartQRLogin(ctx)
 	if err != nil {
-		return fmt.Errorf("start QR login: %w", err)
+		// StartQRLogin may return PasswordRequiredError when resuming
+		// a previous DC-migrated QR scan that requires 2FA.
+		var pwdErr *tg.PasswordRequiredError
+		if !errors.As(err, &pwdErr) {
+			return fmt.Errorf("start QR login: %w", err)
+		}
+		return handle2FA(ctx, client, stdout)
+	}
+
+	// Empty URL means login already completed (e.g. DC migration succeeded).
+	if qr.URL == "" {
+		fmt.Fprintln(stdout, "ok")
+		return nil
 	}
 
 	printQR(stdout, qr.URL)
 	fmt.Fprintln(stdout, "waiting for QR login...")
 
-	err = client.WaitQRLogin(ctx, qr)
+	err = client.WaitQRLogin(ctx, qr, func(newQR tg.QRLogin) {
+		fmt.Fprintln(stdout, "\nQR code expired, refreshing...")
+		printQR(stdout, newQR.URL)
+		fmt.Fprintln(stdout, "waiting for QR login...")
+	})
 	if err != nil {
 		var pwdErr *tg.PasswordRequiredError
 		if !errors.As(err, &pwdErr) {
 			return fmt.Errorf("QR login: %w", err)
 		}
-		password, err := promptPassword("2FA password (input hidden): ")
-		if err != nil {
-			return fmt.Errorf("read password: %w", err)
-		}
-		if err := client.SignInWithPassword(ctx, password); err != nil {
-			return fmt.Errorf("sign in with password: %w", err)
-		}
+		return handle2FA(ctx, client, stdout)
 	}
 
+	fmt.Fprintln(stdout, "ok")
+	return nil
+}
+
+func handle2FA(ctx context.Context, client *tg.GotdClient, stdout io.Writer) error {
+	password, err := promptPassword("2FA password (input hidden): ")
+	if err != nil {
+		return fmt.Errorf("read password: %w", err)
+	}
+	if err := client.SignInWithPassword(ctx, password); err != nil {
+		return fmt.Errorf("sign in with password: %w", err)
+	}
 	fmt.Fprintln(stdout, "ok")
 	return nil
 }
