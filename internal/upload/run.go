@@ -78,9 +78,7 @@ func Run(ctx context.Context, in Input) (Summary, error) {
 
 	var wg sync.WaitGroup
 	for w := 0; w < workers; w++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for ia := range work {
 				if ctx.Err() != nil {
 					canceled.Store(true)
@@ -100,7 +98,7 @@ func Run(ctx context.Context, in Input) (Summary, error) {
 					failedAlbums: &failedAlbums,
 				})
 			}
-		}()
+		})
 	}
 	wg.Wait()
 
