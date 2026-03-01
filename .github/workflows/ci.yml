@@ -5,25 +5,61 @@ on:
     branches:
       - main
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  test:
+  quality-format:
+    name: Quality / Format
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
-
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      - name: Run gofmt Check
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "::error::The following files are not formatted:"
+            echo "$unformatted"
+            exit 1
+          fi
 
-      - name: Format Check
-        run: test -z "$(gofmt -l .)"
-
-      - name: Vet
+  quality-lint:
+    name: Quality / Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Run go vet
         run: go vet ./...
+      - name: Run staticcheck
+        uses: dominikh/staticcheck-action@v1
+        with:
+          install-go: false
 
-      - name: Test
-        run: go test ./...
-
+  test-go:
+    name: Test / Go Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Run Tests
+        run: go test -race -count=1 ./...
