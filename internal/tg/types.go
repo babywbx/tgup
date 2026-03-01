@@ -9,8 +9,12 @@ type ResolvedTarget struct {
 
 // SentMessage is an app-owned projection of Telegram message results.
 type SentMessage struct {
-	ID        int
-	MediaKind string
-	FileName  string
-	Size      int64
+	ID                int
+	MediaKind         string
+	FileName          string
+	Size              int64
+	Duration          float64
+	Width             int
+	Height            int
+	SupportsStreaming bool
 }
