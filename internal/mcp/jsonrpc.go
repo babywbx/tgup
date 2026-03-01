@@ -57,14 +57,6 @@ func rpcError(id json.RawMessage, code int, message string) JSONRPCResponse {
 	}
 }
 
-func rpcErrorWithData(id json.RawMessage, code int, message string, data any) JSONRPCResponse {
-	return JSONRPCResponse{
-		JSONRPC: "2.0",
-		Error:   &JSONRPCError{Code: code, Message: message, Data: data},
-		ID:      id,
-	}
-}
-
 // parseParams decodes JSON-RPC params into target struct.
 func parseParams[T any](params json.RawMessage) (T, error) {
 	var v T

@@ -276,10 +276,7 @@ func (s *MCPServer) toolRunEvents(ctx context.Context, id json.RawMessage, args 
 
 func (s *MCPServer) toolSchemaGet(id json.RawMessage) JSONRPCResponse {
 	schema := Schema()
-	return rpcSuccess(id, SchemaGetOutput{
-		Version: schema.Version,
-		Tools:   schema.Tools,
-	})
+	return rpcSuccess(id, SchemaGetOutput(schema))
 }
 
 // TrackSession updates session activity.
