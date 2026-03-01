@@ -47,6 +47,12 @@ func OpenSQLite(path string, runID string, opts SQLiteOptions) (*SQLiteCoordinat
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite: %w", err)
 	}
+	db.SetMaxOpenConns(1)
+
+	if err := applySQLitePragmas(db); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
 
 	c := &SQLiteCoordinator{
 		db:           db,
@@ -210,6 +216,20 @@ func (c *SQLiteCoordinator) markStale(ctx context.Context) error {
 	`, time.Now().Unix(), staleBefore, c.runID)
 	if err != nil {
 		return fmt.Errorf("mark stale: %w", err)
+	}
+	return nil
+}
+
+func applySQLitePragmas(db *sql.DB) error {
+	pragmas := []string{
+		"PRAGMA journal_mode=WAL",
+		"PRAGMA busy_timeout=5000",
+		"PRAGMA synchronous=NORMAL",
+	}
+	for _, p := range pragmas {
+		if _, err := db.Exec(p); err != nil {
+			return fmt.Errorf("set sqlite pragma: %w", err)
+		}
 	}
 	return nil
 }

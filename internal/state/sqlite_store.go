@@ -32,6 +32,11 @@ func OpenSQLite(path string) (*SQLiteStore, error) {
 	}
 	db.SetMaxOpenConns(1)
 
+	if err := applySQLitePragmas(db); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+
 	store := &SQLiteStore{db: db}
 	if err := store.initSchema(context.Background()); err != nil {
 		_ = db.Close()
@@ -254,4 +259,18 @@ func (s *SQLiteStore) Close() error {
 		return nil
 	}
 	return s.db.Close()
+}
+
+func applySQLitePragmas(db *sql.DB) error {
+	pragmas := []string{
+		"PRAGMA journal_mode=WAL",
+		"PRAGMA busy_timeout=5000",
+		"PRAGMA synchronous=NORMAL",
+	}
+	for _, p := range pragmas {
+		if _, err := db.Exec(p); err != nil {
+			return xerrors.Wrap(xerrors.CodeState, "set sqlite pragma", err)
+		}
+	}
+	return nil
 }
