@@ -8,6 +8,7 @@ type EventStore interface {
 	List(ctx context.Context, jobID string, sinceSeq int64, limit int) (events []Event, hasMore bool, err error)
 	Register(jobID string) Subscription
 	Cleanup(ctx context.Context) error
+	Close() error
 }
 
 // Subscription receives event stream updates.

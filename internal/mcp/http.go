@@ -8,12 +8,12 @@ import (
 	"time"
 )
 
-// Server is a minimal HTTP holder for MCP handlers.
+// Server is the MCP HTTP server.
 type Server struct {
 	httpServer *http.Server
 }
 
-// NewServer builds an MCP HTTP server shell.
+// NewServer builds an MCP HTTP server.
 func NewServer(cfg Config, handler http.Handler) (*Server, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
@@ -24,8 +24,8 @@ func NewServer(cfg Config, handler http.Handler) (*Server, error) {
 			Addr:         addr,
 			Handler:      handler,
 			ReadTimeout:  10 * time.Second,
-			WriteTimeout: 30 * time.Second,
-			IdleTimeout:  60 * time.Second,
+			WriteTimeout: 0, // Disabled for SSE long-lived connections.
+			IdleTimeout:  120 * time.Second,
 		},
 	}, nil
 }
@@ -47,4 +47,12 @@ func (s *Server) Shutdown(ctx context.Context) error {
 		return nil
 	}
 	return s.httpServer.Shutdown(ctx)
+}
+
+// Addr returns the configured listen address.
+func (s *Server) Addr() string {
+	if s == nil || s.httpServer == nil {
+		return ""
+	}
+	return s.httpServer.Addr
 }
