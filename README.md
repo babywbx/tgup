@@ -39,8 +39,10 @@ License: Apache-2.0
 
 ## 4. 安装与环境
 
-- Go: `>= 1.23`
+- Go: `>= 1.25`
 - 编译为单一可执行文件，无外部运行时依赖
+
+从 [GitHub Releases](https://github.com/babywbx/tgup/releases) 下载预编译二进制（支持 Linux/macOS/Windows，amd64/arm64），或从源码构建：
 
 ```bash
 go build -o tgup ./cmd/tgup
@@ -81,7 +83,7 @@ tgup run --src /path/to/media --caption "daily"
 ### 6.1 顶层
 
 ```bash
-tgup [-h] {login,dry-run,run,mcp}
+tgup [-h] {login,dry-run,run,mcp,version}
 ```
 
 ### 6.2 `login`
