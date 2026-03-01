@@ -1,0 +1,28 @@
+{
+  "sources": [
+    "/src/a",
+    "/src/b"
+  ],
+  "items": 3,
+  "albums": 2,
+  "order": "name",
+  "reverse": false,
+  "album_max": 10,
+  "preview": [
+    {
+      "label": "album-1",
+      "count": 2,
+      "items": [
+        "/src/a/1.jpg",
+        "/src/a/2.mp4"
+      ]
+    },
+    {
+      "label": "album-2",
+      "count": 1,
+      "items": [
+        "/src/b/3.jpg"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+dry-run summary
+sources: 1
+items: 2
+albums: 1
+order: name
+reverse: false
+album_max: 10
+
+preview
+1. media [2]
+   - <ROOT>/media/a.jpg
+   - <ROOT>/media/b.mp4
