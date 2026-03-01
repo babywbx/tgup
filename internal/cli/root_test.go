@@ -108,30 +108,46 @@ func TestRunUnknownCommand(t *testing.T) {
 	}
 }
 
-func TestRunKnownButUnimplementedCommands(t *testing.T) {
+func TestMCPServeRequiresConfig(t *testing.T) {
 	t.Parallel()
 
-	tests := [][]string{
-		{"login"},
-		{"run"},
-		{"mcp", "serve"},
+	// mcp serve without valid config should fail.
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := Run([]string{"mcp", "serve", "--config", "/nonexistent/tgup.toml"}, &stdout, &stderr)
+	if code != 1 {
+		t.Fatalf("expected exit code 1, got %d", code)
 	}
+	if !strings.Contains(stderr.String(), "mcp serve") {
+		t.Fatalf("expected mcp serve error, got: %s", stderr.String())
+	}
+}
 
-	for _, tc := range tests {
-		tc := tc
-		t.Run(strings.Join(tc, "_"), func(t *testing.T) {
-			t.Parallel()
+func TestLoginRequiresMethod(t *testing.T) {
+	t.Parallel()
 
-			var stdout bytes.Buffer
-			var stderr bytes.Buffer
-			code := Run(tc, &stdout, &stderr)
-			if code != 1 {
-				t.Fatalf("expected exit code 1, got %d", code)
-			}
-			if !strings.Contains(stderr.String(), "not implemented yet") {
-				t.Fatalf("expected not implemented output, got: %s", stderr.String())
-			}
-		})
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := Run([]string{"login"}, &stdout, &stderr)
+	if code != 2 {
+		t.Fatalf("expected exit code 2, got %d", code)
+	}
+	if !strings.Contains(stderr.String(), "one of --code or --qr is required") {
+		t.Fatalf("expected method required error, got: %s", stderr.String())
+	}
+}
+
+func TestLoginRejectsConflictingMethods(t *testing.T) {
+	t.Parallel()
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := Run([]string{"login", "--code", "--qr"}, &stdout, &stderr)
+	if code != 2 {
+		t.Fatalf("expected exit code 2, got %d", code)
+	}
+	if !strings.Contains(stderr.String(), "mutually exclusive") {
+		t.Fatalf("expected mutually exclusive error, got: %s", stderr.String())
 	}
 }
 
