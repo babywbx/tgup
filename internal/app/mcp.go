@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 
-	"github.com/wbx/tgup/internal/xerrors"
+	"github.com/babywbx/tgup/internal/xerrors"
 )
 
 // MCPServe executes MCP server flow (implemented in later milestones).

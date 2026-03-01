@@ -1,0 +1,102 @@
+# tgup config example
+# Precedence: CLI > ENV > config file > defaults.
+# Relative paths are resolved against this file's directory.
+
+[telegram]
+# Telegram API ID from https://my.telegram.org
+api_id = 123456
+# Telegram API hash from https://my.telegram.org
+api_hash = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# Session file path (default: ./secrets/session.session)
+session = "./secrets/session.session"
+# Legacy alias is also accepted by loader: session_path = "./secrets/session.session"
+
+[paths]
+# Shared SQLite state DB for resume and FIFO queue mode (default: ./data/state.sqlite)
+state = "./data/state.sqlite"
+# Per-run artifact output root (default: ./data/runs).
+artifacts_dir = "./data/runs"
+
+[scan]
+# Source files/directories to scan. Required unless you pass --src on CLI.
+src = ["/path/to/media_a", "/path/to/media_b"]
+# Recursively scan directories (default: true).
+recursive = true
+# Follow symbolic links while scanning (default: false).
+follow_symlinks = false
+# Include only these extensions. Default is built-in image+video extensions.
+include_ext = [".jpg", ".jpeg", ".png", ".webp", ".heic", ".mp4", ".mov", ".mkv", ".webm"]
+# Exclude these extensions after include filter.
+exclude_ext = [".tmp"]
+
+[plan]
+# Album build order: name | mtime | size | random (default: mtime).
+order = "mtime"
+# Reverse the selected order (default: false).
+reverse = false
+# Telegram album size limit, valid range: 1..10 (default: 10).
+album_max = 10
+
+[upload]
+# Upload target peer ("me" means Saved Messages, default: me).
+target = "me"
+# Optional album caption (single caption per album in Telegram).
+caption = ""
+# Caption parse mode: plain | md (default: plain).
+parse_mode = "plain"
+# Concurrent album uploads, must be >= 1 (default: 5).
+concurrency_album = 5
+# Reject albums with invalid video metadata during precheck (default: false).
+strict_metadata = false
+# Image upload policy: auto | photo | document (default: auto).
+image_mode = "auto"
+# Video thumbnail policy: auto | off (default: auto).
+video_thumbnail = "auto"
+# Resume from state DB and skip already-sent files (default: true).
+resume = true
+# Legacy alias for [paths].state; [paths].state is preferred.
+state = "./data/state.sqlite"
+
+[maintenance]
+# Enable automatic state DB cleanup (default: true).
+enabled = true
+# Cleanup check interval in hours, must be > 0 (default: 6).
+interval_hours = 6
+# Retain successful upload records for N days, must be >= 0 (default: 90).
+retention_sent_days = 90
+# Retain failed upload records for N days, must be >= 0 (default: 30).
+retention_failed_days = 30
+# Retain queue records for N days, must be >= 0 (default: 7).
+retention_queue_days = 7
+# Trigger cleanup if DB exceeds this size in MB, must be > 0 (default: 256).
+max_db_mb = 256
+# Trigger cleanup if upload rows exceed this value, must be > 0 (default: 300000).
+max_upload_rows = 300000
+# First cleanup run previews deletions only when true (default: true).
+first_run_preview = true
+# Minimum cooldown hours between VACUUM runs, must be >= 0 (default: 24).
+vacuum_cooldown_hours = 24
+# Minimum reclaim estimate (MB) required before VACUUM, must be >= 0 (default: 32).
+vacuum_min_reclaim_mb = 32
+
+[mcp]
+# Enable MCP section from config (default: false).
+enabled = false
+# MCP bind host (default: 127.0.0.1).
+host = "127.0.0.1"
+# MCP bind port, valid range: 1..65535 (default: 8765).
+port = 8765
+# Bearer token used by /mcp endpoints. Required at runtime for `tgup mcp serve`.
+token = "replace-with-a-strong-token"
+# Allowed filesystem roots for MCP tools. Required at runtime for `tgup mcp serve`.
+allow_roots = ["./media", "./data", "./secrets"]
+# SQLite DB path for MCP control/event data (default: ./data/mcp.sqlite).
+control_db = "./data/mcp.sqlite"
+# MCP event retention window in hours, must be > 0 (default: 72).
+event_retention_hours = 72
+# Max concurrent MCP jobs, must be >= 1 (default: 4).
+max_concurrent_jobs = 4
+# Enable SSE endpoint (GET /mcp with text/event-stream), default: true.
+enable_sse = true
+# Allowed Origin list for browser clients (default: null + localhost entries).
+allowed_origins = ["null", "http://localhost", "http://127.0.0.1"]

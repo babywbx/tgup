@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/wbx/tgup/internal/app"
-	"github.com/wbx/tgup/internal/mcp"
+	"github.com/babywbx/tgup/internal/app"
+	"github.com/babywbx/tgup/internal/mcp"
 )
 
 func runMCP(args []string, stdout io.Writer, stderr io.Writer) int {

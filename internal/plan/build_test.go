@@ -5,7 +5,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/wbx/tgup/internal/scan"
+	"github.com/babywbx/tgup/internal/scan"
 )
 
 func TestBuildSortByNameAndMTime(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/wbx/tgup/internal/config"
+	"github.com/babywbx/tgup/internal/config"
 )
 
 func TestWriteDryRunGolden(t *testing.T) {

@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 
-	"github.com/wbx/tgup/internal/xerrors"
+	"github.com/babywbx/tgup/internal/xerrors"
 )
 
 // Login executes login flow (implemented in later milestones).

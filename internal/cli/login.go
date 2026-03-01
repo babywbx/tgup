@@ -6,7 +6,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/wbx/tgup/internal/app"
+	"github.com/babywbx/tgup/internal/app"
 )
 
 func runLogin(args []string, _ io.Writer, stderr io.Writer) int {

@@ -1,4 +1,4 @@
-module github.com/wbx/tgup
+module github.com/babywbx/tgup
 
 go 1.23
 

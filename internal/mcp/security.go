@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/wbx/tgup/internal/files"
+	"github.com/babywbx/tgup/internal/files"
 )
 
 var errUnauthorized = errors.New("unauthorized")

@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/wbx/tgup/internal/app"
-	"github.com/wbx/tgup/internal/artifacts"
-	"github.com/wbx/tgup/internal/config"
+	"github.com/babywbx/tgup/internal/app"
+	"github.com/babywbx/tgup/internal/artifacts"
+	"github.com/babywbx/tgup/internal/config"
 )
 
 func runDryRun(args []string, stdout io.Writer, stderr io.Writer) int {

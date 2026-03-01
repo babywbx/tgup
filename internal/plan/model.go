@@ -1,6 +1,6 @@
 package plan
 
-import "github.com/wbx/tgup/internal/scan"
+import "github.com/babywbx/tgup/internal/scan"
 
 // Album is the unit of upload scheduling.
 type Album struct {

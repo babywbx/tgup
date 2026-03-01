@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/wbx/tgup/internal/xerrors"
+	"github.com/babywbx/tgup/internal/xerrors"
 	_ "modernc.org/sqlite"
 )
 

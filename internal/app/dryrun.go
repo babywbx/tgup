@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/wbx/tgup/internal/artifacts"
-	"github.com/wbx/tgup/internal/config"
-	"github.com/wbx/tgup/internal/plan"
-	"github.com/wbx/tgup/internal/scan"
+	"github.com/babywbx/tgup/internal/artifacts"
+	"github.com/babywbx/tgup/internal/config"
+	"github.com/babywbx/tgup/internal/plan"
+	"github.com/babywbx/tgup/internal/scan"
 )
 
 // DryRunResult captures deterministic dry-run output data.

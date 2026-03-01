@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/wbx/tgup/internal/cli"
+	"github.com/babywbx/tgup/internal/cli"
 )
 
 func main() {

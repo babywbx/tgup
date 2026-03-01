@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/wbx/tgup/internal/scan"
+	"github.com/babywbx/tgup/internal/scan"
 )
 
 const defaultAlbumMax = 10

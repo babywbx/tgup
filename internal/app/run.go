@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 
-	"github.com/wbx/tgup/internal/xerrors"
+	"github.com/babywbx/tgup/internal/xerrors"
 )
 
 // Run executes upload flow (implemented in later milestones).

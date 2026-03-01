@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/wbx/tgup/internal/files"
+	"github.com/babywbx/tgup/internal/files"
 )
 
 // LoadedConfig keeps parsed file overrides and source metadata.
