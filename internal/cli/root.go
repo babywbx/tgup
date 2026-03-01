@@ -6,6 +6,19 @@ import (
 	"strings"
 )
 
+var (
+	buildVersion = "dev"
+	buildCommit  = "unknown"
+	buildDate    = "unknown"
+)
+
+// SetVersion sets build info injected via ldflags.
+func SetVersion(version, commit, date string) {
+	buildVersion = version
+	buildCommit = commit
+	buildDate = date
+}
+
 // Run executes tgup CLI command handling and returns process exit code.
 func Run(args []string, stdout io.Writer, stderr io.Writer) int {
 	if len(args) == 0 {
@@ -22,6 +35,9 @@ func Run(args []string, stdout io.Writer, stderr io.Writer) int {
 		return runRun(args[1:], stdout, stderr)
 	case "mcp":
 		return runMCP(args[1:], stdout, stderr)
+	case "version", "-v", "--version":
+		fmt.Fprintf(stdout, "tgup %s (commit: %s, built: %s)\n", buildVersion, buildCommit, buildDate)
+		return 0
 	case "-h", "--help", "help":
 		printUsage(stdout)
 		return 0
@@ -42,6 +58,7 @@ func printUsage(w io.Writer) {
 		"  run",
 		"  mcp serve",
 		"  mcp schema",
+		"  version",
 	}
 	_, _ = fmt.Fprintln(w, strings.Join(lines, "\n"))
 }

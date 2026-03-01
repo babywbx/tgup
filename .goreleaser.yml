@@ -1,0 +1,65 @@
+version: 2
+
+builds:
+  - main: ./cmd/tgup
+    binary: tgup
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.ShortCommit}} -X main.date={{.Date}}
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  groups:
+    - title: "✨ New Features"
+      regexp: '^✨ feat'
+      order: 0
+    - title: "🐛 Bug Fixes"
+      regexp: '^🐛 fix'
+      order: 1
+    - title: "⚡️ Performance"
+      regexp: '^⚡️ perf'
+      order: 2
+    - title: "♻️ Refactoring"
+      regexp: '^♻️ refactor'
+      order: 3
+    - title: "📝 Documentation"
+      regexp: '^📝 docs'
+      order: 4
+    - title: "✅ Tests"
+      regexp: '^✅ test'
+      order: 5
+    - title: "📦 Build & CI"
+      regexp: '^(📦 build|💚 ci)'
+      order: 6
+    - title: "🔧 Other Changes"
+      order: 999
+  filters:
+    exclude:
+      - '^🎨 style'
+
+release:
+  github:
+    owner: babywbx
+    name: tgup
