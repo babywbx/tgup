@@ -170,7 +170,7 @@ func RunUpload(configPath string, cli config.Overlay, opts RunOptions) int {
 		Plan:        pl.Albums,
 		Transport:   client,
 		Store:       store,
-		Prober:      media.FFProbeMetadataProber{},
+		Prober:      media.NewChainProber(media.FFProbeMetadataProber{}, media.NativeMetadataProber{}),
 		Thumbnailer: media.FFMpegThumbnailer{},
 		Config: upload.Config{
 			Target:         cfg.Upload.Target,

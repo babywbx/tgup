@@ -12,6 +12,13 @@ type Transport interface {
 	SendAlbum(ctx context.Context, req SendAlbumRequest) (SendResult, error)
 }
 
+// VideoMeta carries video dimensions and duration for upload attributes.
+type VideoMeta struct {
+	Duration float64
+	Width    int
+	Height   int
+}
+
 // SendSingleRequest describes one media send.
 type SendSingleRequest struct {
 	Target            ResolvedTarget
@@ -21,6 +28,7 @@ type SendSingleRequest struct {
 	ForceDocument     bool
 	SupportsStreaming bool
 	ThumbnailPath     string
+	Video             *VideoMeta
 	Progress          ProgressFunc
 }
 
@@ -39,6 +47,7 @@ type AlbumMedia struct {
 	ForceDocument     bool
 	SupportsStreaming bool
 	ThumbnailPath     string
+	Video             *VideoMeta
 }
 
 // SendResult is the normalized transport response.

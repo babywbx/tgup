@@ -147,7 +147,7 @@ func (c *GotdClient) SendSingle(ctx context.Context, req SendSingleRequest) (Sen
 		}
 	}
 
-	media := buildInputMedia(file, req.Path, req.ForceDocument, req.SupportsStreaming, thumb)
+	media := buildInputMedia(file, req.Path, req.ForceDocument, req.SupportsStreaming, thumb, req.Video)
 
 	updates, err := api.MessagesSendMedia(ctx, &tdtg.MessagesSendMediaRequest{
 		Peer:     peer,
@@ -206,7 +206,7 @@ func (c *GotdClient) SendAlbum(ctx context.Context, req SendAlbumRequest) (SendR
 			}
 		}
 
-		inputMedia := buildInputMedia(file, item.Path, item.ForceDocument, item.SupportsStreaming, thumb)
+		inputMedia := buildInputMedia(file, item.Path, item.ForceDocument, item.SupportsStreaming, thumb, item.Video)
 
 		// Pre-upload to get server-side media reference for album.
 		uploaded, err := api.MessagesUploadMedia(ctx, &tdtg.MessagesUploadMediaRequest{
@@ -241,7 +241,7 @@ func (c *GotdClient) SendAlbum(ctx context.Context, req SendAlbumRequest) (SendR
 }
 
 // buildInputMedia creates the appropriate InputMedia for a file.
-func buildInputMedia(file tdtg.InputFileClass, path string, forceDocument, supportsStreaming bool, thumb tdtg.InputFileClass) tdtg.InputMediaClass {
+func buildInputMedia(file tdtg.InputFileClass, path string, forceDocument, supportsStreaming bool, thumb tdtg.InputFileClass, video *VideoMeta) tdtg.InputMediaClass {
 	kind := detectFileKind(path)
 
 	if kind == "image" && !forceDocument {
@@ -256,9 +256,15 @@ func buildInputMedia(file tdtg.InputFileClass, path string, forceDocument, suppo
 	}
 
 	if kind == "video" {
-		attrs = append(attrs, &tdtg.DocumentAttributeVideo{
+		va := &tdtg.DocumentAttributeVideo{
 			SupportsStreaming: supportsStreaming,
-		})
+		}
+		if video != nil {
+			va.Duration = video.Duration
+			va.W = video.Width
+			va.H = video.Height
+		}
+		attrs = append(attrs, va)
 	}
 
 	return &tdtg.InputMediaUploadedDocument{

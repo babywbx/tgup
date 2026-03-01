@@ -357,6 +357,7 @@ func sendAlbumOnce(ctx context.Context, in Input, files []AlbumFile, target tg.R
 			ForceDocument:     forceDocument,
 			SupportsStreaming: true,
 			ThumbnailPath:     f.Thumbnail,
+			Video:             videoMetaFromFile(f),
 		})
 	}
 
@@ -372,6 +373,7 @@ func sendAlbumOnce(ctx context.Context, in Input, files []AlbumFile, target tg.R
 			ForceDocument:     forceDocument,
 			SupportsStreaming: true,
 			ThumbnailPath:     f.Thumbnail,
+			Video:             videoMetaFromFile(f),
 		})
 	}
 
@@ -380,6 +382,18 @@ func sendAlbumOnce(ctx context.Context, in Input, files []AlbumFile, target tg.R
 		Items:     items,
 		ParseMode: in.Config.ParseMode,
 	})
+}
+
+// videoMetaFromFile converts precheck metadata to transport VideoMeta.
+func videoMetaFromFile(f AlbumFile) *tg.VideoMeta {
+	if f.Metadata == nil {
+		return nil
+	}
+	return &tg.VideoMeta{
+		Duration: f.Metadata.DurationSeconds,
+		Width:    f.Metadata.Width,
+		Height:   f.Metadata.Height,
+	}
 }
 
 func backoffWithJitter(attempt int) time.Duration {
