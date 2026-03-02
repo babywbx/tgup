@@ -74,6 +74,8 @@ var transientTypes = []string{
 	"RPC_MCGET_FAIL",
 	"WORKER_BUSY_TOO_LONG_RETRY",
 	"No workers running",
+	// 400-level but documented as "Internal issues, try again later".
+	"PHOTO_SAVE_FILE_INVALID",
 }
 
 // retryMiddleware retries on Telegram transient server errors without delay.
