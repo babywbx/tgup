@@ -12,6 +12,7 @@ import (
 
 	"github.com/gotd/td/telegram/uploader"
 	tdtg "github.com/gotd/td/tg"
+	"golang.org/x/sync/errgroup"
 )
 
 // ResolveTarget resolves a target string to a ResolvedTarget.
@@ -163,6 +164,7 @@ func (c *GotdClient) SendSingle(ctx context.Context, req SendSingleRequest) (Sen
 }
 
 // SendAlbum sends multiple media files as a grouped album.
+// Files are uploaded in parallel for better throughput, then sent as one album.
 func (c *GotdClient) SendAlbum(ctx context.Context, req SendAlbumRequest) (SendResult, error) {
 	if len(req.Items) == 0 {
 		return SendResult{}, fmt.Errorf("album must contain at least one item")
@@ -181,57 +183,64 @@ func (c *GotdClient) SendAlbum(ctx context.Context, req SendAlbumRequest) (SendR
 		return SendResult{}, err
 	}
 
-	// Create a fresh uploader per request — WithProgress mutates in place.
-	up, err := c.newUploader()
-	if err != nil {
-		return SendResult{}, err
-	}
-	if req.Progress != nil {
-		up = up.WithProgress(&progressAdapter{fn: req.Progress})
-	}
+	// Upload all files in parallel, each with its own uploader instance.
+	// Results are written by index so no mutex is needed.
+	results := make([]tdtg.InputSingleMedia, len(req.Items))
+	g, gctx := errgroup.WithContext(ctx)
 
-	var multiMedia []tdtg.InputSingleMedia
-
-	for _, item := range req.Items {
-		file, err := up.FromPath(ctx, item.Path)
-		if err != nil {
-			return SendResult{}, mapGotdError(err)
-		}
-
-		var thumb tdtg.InputFileClass
-		if item.ThumbnailPath != "" {
-			thumbUp, err := c.newUploader()
-			if err == nil {
-				thumb, _ = thumbUp.FromPath(ctx, item.ThumbnailPath) // optional
+	for i, item := range req.Items {
+		g.Go(func() error {
+			// Each goroutine gets a fresh uploader (WithProgress mutates).
+			up, err := c.newUploader()
+			if err != nil {
+				return err
 			}
-		}
 
-		inputMedia := buildInputMedia(file, item.Path, item.ForceDocument, item.SupportsStreaming, thumb, item.Video)
+			file, err := up.FromPath(gctx, item.Path)
+			if err != nil {
+				return mapGotdError(err)
+			}
 
-		// Pre-upload to get server-side media reference for album.
-		uploaded, err := api.MessagesUploadMedia(ctx, &tdtg.MessagesUploadMediaRequest{
-			Peer:  peer,
-			Media: inputMedia,
+			var thumb tdtg.InputFileClass
+			if item.ThumbnailPath != "" {
+				thumbUp, err := c.newUploader()
+				if err == nil {
+					thumb, _ = thumbUp.FromPath(gctx, item.ThumbnailPath)
+				}
+			}
+
+			inputMedia := buildInputMedia(file, item.Path, item.ForceDocument, item.SupportsStreaming, thumb, item.Video)
+
+			// Pre-upload to get server-side media reference.
+			uploaded, err := api.MessagesUploadMedia(gctx, &tdtg.MessagesUploadMediaRequest{
+				Peer:  peer,
+				Media: inputMedia,
+			})
+			if err != nil {
+				return mapGotdError(err)
+			}
+
+			refMedia, err := messageMediaToInput(uploaded)
+			if err != nil {
+				return err
+			}
+
+			results[i] = tdtg.InputSingleMedia{
+				Media:    refMedia,
+				RandomID: cryptoRandInt63(),
+				Message:  item.Caption,
+			}
+			return nil
 		})
-		if err != nil {
-			return SendResult{}, mapGotdError(err)
-		}
+	}
 
-		refMedia, err := messageMediaToInput(uploaded)
-		if err != nil {
-			return SendResult{}, err
-		}
-
-		multiMedia = append(multiMedia, tdtg.InputSingleMedia{
-			Media:    refMedia,
-			RandomID: cryptoRandInt63(),
-			Message:  item.Caption,
-		})
+	if err := g.Wait(); err != nil {
+		return SendResult{}, err
 	}
 
 	updates, err := api.MessagesSendMultiMedia(ctx, &tdtg.MessagesSendMultiMediaRequest{
 		Peer:       peer,
-		MultiMedia: multiMedia,
+		MultiMedia: results,
 	})
 	if err != nil {
 		return SendResult{}, mapGotdError(err)
