@@ -185,8 +185,9 @@ func (c *GotdClient) SendAlbum(ctx context.Context, req SendAlbumRequest) (SendR
 
 	// Upload all files in parallel, each with its own uploader instance.
 	// Results are written by index so no mutex is needed.
+	// Use plain errgroup (no WithContext) so one failure doesn't cancel others.
 	results := make([]tdtg.InputSingleMedia, len(req.Items))
-	g, gctx := errgroup.WithContext(ctx)
+	var g errgroup.Group
 
 	for i, item := range req.Items {
 		g.Go(func() error {
@@ -196,7 +197,7 @@ func (c *GotdClient) SendAlbum(ctx context.Context, req SendAlbumRequest) (SendR
 				return err
 			}
 
-			file, err := up.FromPath(gctx, item.Path)
+			file, err := up.FromPath(ctx, item.Path)
 			if err != nil {
 				return mapGotdError(err)
 			}
@@ -205,14 +206,14 @@ func (c *GotdClient) SendAlbum(ctx context.Context, req SendAlbumRequest) (SendR
 			if item.ThumbnailPath != "" {
 				thumbUp, err := c.newUploader()
 				if err == nil {
-					thumb, _ = thumbUp.FromPath(gctx, item.ThumbnailPath)
+					thumb, _ = thumbUp.FromPath(ctx, item.ThumbnailPath)
 				}
 			}
 
 			inputMedia := buildInputMedia(file, item.Path, item.ForceDocument, item.SupportsStreaming, thumb, item.Video)
 
 			// Pre-upload to get server-side media reference.
-			uploaded, err := api.MessagesUploadMedia(gctx, &tdtg.MessagesUploadMediaRequest{
+			uploaded, err := api.MessagesUploadMedia(ctx, &tdtg.MessagesUploadMediaRequest{
 				Peer:  peer,
 				Media: inputMedia,
 			})
