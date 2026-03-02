@@ -9,7 +9,7 @@ import (
 var (
 	errInvalidOrder      = errors.New("must be one of: name, mtime, size, random")
 	errInvalidParseMode  = errors.New("must be one of: plain, md")
-	errInvalidImageMode  = errors.New("must be one of: auto, photo, document")
+	errInvalidImageMode  = errors.New("must be one of: auto, photo, document, compress")
 	errInvalidDuplicate  = errors.New("must be one of: skip, ask, upload")
 	errInvalidThumbnail  = errors.New("must be auto, off, or a file path")
 	errInvalidPort       = errors.New("must be in range 1..65535 when MCP is enabled")
@@ -66,7 +66,7 @@ func Validate(cfg Config) error {
 	if !oneOf(strings.ToLower(cfg.Upload.ParseMode), "plain", "md") {
 		errs = append(errs, ValidationError{Field: "upload.parse_mode", Err: errInvalidParseMode})
 	}
-	if !oneOf(strings.ToLower(cfg.Upload.ImageMode), "auto", "photo", "document") {
+	if !oneOf(strings.ToLower(cfg.Upload.ImageMode), "auto", "photo", "document", "compress") {
 		errs = append(errs, ValidationError{Field: "upload.image_mode", Err: errInvalidImageMode})
 	}
 	if strings.TrimSpace(cfg.Upload.VideoThumbnail) == "" {

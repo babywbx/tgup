@@ -3,6 +3,7 @@ package upload
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -285,6 +286,14 @@ func processAlbum(ctx context.Context, ia indexedAlbum, args processArgs) {
 // gotd middlewares injected in NewGotdClient.
 func sendWithRetry(ctx context.Context, in Input, files []AlbumFile, target tg.ResolvedTarget) (tg.SendResult, error) {
 	imageMode := strings.ToLower(strings.TrimSpace(in.Config.ImageMode))
+
+	// Compress mode: pre-compress oversized images, then send as photo.
+	if imageMode == "compress" {
+		compressed, cleanup := compressOversizedImages(in, files)
+		defer cleanup()
+		files = compressed
+	}
+
 	forceDocument := imageMode == "document"
 	imageRetries := 0
 
@@ -293,13 +302,53 @@ func sendWithRetry(ctx context.Context, in Input, files []AlbumFile, target tg.R
 		if err == nil {
 			return result, nil
 		}
-		// ImageProcessFailed → switch to document mode once.
+		// ImageProcessFailed → switch to document mode once (auto only).
+		// Compress mode forces photo: user explicitly wants photo delivery.
 		if tg.IsImageProcessFailed(err) && !forceDocument && imageMode == "auto" && imageRetries < maxImageRetries {
 			forceDocument = true
 			imageRetries++
 			continue
 		}
 		return tg.SendResult{}, err
+	}
+}
+
+// compressOversizedImages applies media.CompressPhoto to image files,
+// returning updated files and a cleanup function for temp files.
+func compressOversizedImages(in Input, files []AlbumFile) ([]AlbumFile, func()) {
+	out := make([]AlbumFile, len(files))
+	copy(out, files)
+
+	var cleanups []func()
+	for i, f := range out {
+		if f.Kind != media.KindImage {
+			continue
+		}
+		compressed, cleanup, err := media.CompressPhoto(f.Path)
+		if err != nil {
+			emitEvent(in, Event{
+				Type:  "upload.compress_warning",
+				Error: fmt.Sprintf("%s: %v", f.Path, err),
+			})
+			continue
+		}
+		if compressed == "" {
+			continue
+		}
+		info, err := os.Stat(compressed)
+		if err != nil {
+			cleanup()
+			continue
+		}
+		out[i].Path = compressed
+		out[i].Size = info.Size()
+		cleanups = append(cleanups, cleanup)
+	}
+
+	return out, func() {
+		for _, fn := range cleanups {
+			fn()
+		}
 	}
 }
 
