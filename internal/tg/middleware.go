@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gotd/td/bin"
+	"github.com/gotd/td/pool"
 	"github.com/gotd/td/telegram"
 	"github.com/gotd/td/tg"
 	"github.com/gotd/td/tgerr"
@@ -187,6 +188,9 @@ func isTransportError(err error) bool {
 	// RPC errors are business-level — do not recover.
 	if _, ok := tgerr.As(err); ok {
 		return false
+	}
+	if errors.Is(err, pool.ErrConnDead) {
+		return true
 	}
 	var netErr net.Error
 	if errors.As(err, &netErr) {

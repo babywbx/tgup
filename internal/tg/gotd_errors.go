@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 
+	"github.com/gotd/td/pool"
 	"github.com/gotd/td/tgerr"
 )
 
@@ -42,6 +43,11 @@ func mapGotdError(err error) error {
 		default:
 			return fmt.Errorf("telegram: %s (code %d)", rpcErr.Message, rpcErr.Code)
 		}
+	}
+
+	// Connection pool dead — retryable.
+	if errors.Is(err, pool.ErrConnDead) {
+		return fmt.Errorf("%v: %w", err, ErrRetryable)
 	}
 
 	// Network-level errors are retryable.

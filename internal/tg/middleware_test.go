@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gotd/td/bin"
+	"github.com/gotd/td/pool"
 	"github.com/gotd/td/tg"
 	"github.com/gotd/td/tgerr"
 )
@@ -249,6 +250,20 @@ func TestRecovery_UnexpectedEOFRecovered(t *testing.T) {
 	}
 }
 
+func TestRecovery_ConnDeadRecovered(t *testing.T) {
+	mock := newMock(pool.ErrConnDead) // first fails, second succeeds
+	mw := NewRecoveryMiddleware(30 * time.Second)
+	fn := mw.Handle(mock)
+
+	err := fn.Invoke(context.Background(), nil, nil)
+	if err != nil {
+		t.Fatalf("expected nil, got %v", err)
+	}
+	if mock.calls.Load() != 2 {
+		t.Fatalf("expected 2 calls, got %d", mock.calls.Load())
+	}
+}
+
 func TestRecovery_RPCErrorPassesThrough(t *testing.T) {
 	rpcErr := tgerr.New(400, "PEER_ID_INVALID")
 	mock := newMock(rpcErr)
@@ -319,6 +334,7 @@ func TestIsTransportError(t *testing.T) {
 		{"net error", &net.OpError{Op: "read", Err: errors.New("reset")}, true},
 		{"io.EOF", io.EOF, true},
 		{"unexpected eof", io.ErrUnexpectedEOF, true},
+		{"conn dead", pool.ErrConnDead, true},
 		{"rpc error", tgerr.New(400, "BAD_REQUEST"), false},
 		{"plain error", errors.New("something"), false},
 		{"nil", nil, false},
