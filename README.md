@@ -19,9 +19,11 @@ License: Apache-2.0
 | 功能 | 默认行为 | 相关参数 | 关键说明 |
 |---|---|---|---|
 | 登录（验证码/QR） | 复用 session 文件 | `login --code` / `login --qr` / `--session` | 支持 2FA；session 文件是敏感凭证 |
+| 快速验证（demo） | 生成测试图 → 上传 → 清理 | `demo` | 一条命令验证登录和上传链路 |
 | 扫描媒体 | 递归扫描、不过软链 | `--src` `--recursive` `--follow-symlinks` `--include-ext` `--exclude-ext` | 支持多个 `--src`，会去重真实路径 |
 | 分组与切片 | 按父目录分组，按 10 切片 | `--order` `--reverse` `--album-max` | Telegram album 上限 10 |
 | 上传并发 | album 级并发 5 | `--concurrency-album` | 并发单位是 album，不是单文件 |
+| 分片并行 | 单文件 8 线程并行上传 | `--threads` | 512 KB 分片 + 多线程并行，加速大文件 |
 | 断点续传 | 默认开启 | `--resume/--no-resume` | 以 `path + size + mtime_ns` 识别是否已发送 |
 | 重复文件策略 | `ask` | `--duplicate {skip,ask,upload}` | 仅在 `resume` 开启时生效 |
 | 多命令协调 | 同一 state FIFO 排队 | 默认模式 | 跨进程共享 SQLite `run_queue` |
@@ -66,13 +68,19 @@ tgup login --code
 tgup login --qr
 ```
 
-3. 先看上传计划：
+3. （可选）快速验证登录和上传是否正常：
+
+```bash
+tgup demo
+```
+
+4. 先看上传计划：
 
 ```bash
 tgup dry-run --src /path/to/media --order mtime
 ```
 
-4. 开始上传：
+5. 开始上传：
 
 ```bash
 tgup run --src /path/to/media --caption "daily"
@@ -83,10 +91,19 @@ tgup run --src /path/to/media --caption "daily"
 ### 6.1 顶层
 
 ```bash
-tgup [-h] {login,dry-run,run,mcp,version}
+tgup [-h] {login,dry-run,run,demo,mcp,version}
 ```
 
-### 6.2 `login`
+### 6.2 `demo`
+
+```bash
+tgup demo [--config CONFIG] [--api-id API_ID] [--api-hash API_HASH] [--session SESSION]
+```
+
+- 快速验证登录和上传链路：生成 2 张测试图片 → 上传到 Saved Messages → 自动清理
+- 不需要准备任何媒体文件，一条命令完成端到端验证
+
+### 6.3 `login`
 
 ```bash
 tgup login [--config CONFIG] [--api-id API_ID] [--api-hash API_HASH] [--session SESSION] (--qr | --code) [--phone PHONE]
@@ -96,7 +113,7 @@ tgup login [--config CONFIG] [--api-id API_ID] [--api-hash API_HASH] [--session 
 - `--code`: 验证码登录，必要时会提示 2FA 密码
 - `--session`: session 文件路径（默认 `./secrets/session.session`）
 
-### 6.3 `dry-run`
+### 6.4 `dry-run`
 
 ```bash
 tgup dry-run [--config CONFIG] [--src SRC] [--recursive|--no-recursive] [--follow-symlinks|--no-follow-symlinks] [--include-ext CSV] [--exclude-ext CSV] [--order {name,mtime,size,random}] [--reverse|--no-reverse] [--album-max N]
@@ -105,10 +122,10 @@ tgup dry-run [--config CONFIG] [--src SRC] [--recursive|--no-recursive] [--follo
 - 只扫描 + 构建计划，不上传
 - 会打印：文件总数、图片/视频数量、album 列表、文件名摘要
 
-### 6.4 `run`
+### 6.5 `run`
 
 ```bash
-tgup run [--config CONFIG] [--src SRC] [--recursive|--no-recursive] [--follow-symlinks|--no-follow-symlinks] [--include-ext CSV] [--exclude-ext CSV] [--order {name,mtime,size,random}] [--reverse|--no-reverse] [--album-max N] [--api-id API_ID] [--api-hash API_HASH] [--session SESSION] [--target TARGET] [--caption CAPTION] [--parse-mode {plain,md}] [--concurrency-album N] [--strict-metadata|--no-strict-metadata] [--image-mode {auto,photo,document}] [--video-thumbnail {auto,off}] [--state STATE] [--artifacts-dir DIR] [--resume|--no-resume] [--maintenance|--no-maintenance] [--cleanup-now] [--duplicate {skip,ask,upload}] [--force-multi-command] [--no-progress] [--plan] [--plan-files]
+tgup run [--config CONFIG] [--src SRC] [--recursive|--no-recursive] [--follow-symlinks|--no-follow-symlinks] [--include-ext CSV] [--exclude-ext CSV] [--order {name,mtime,size,random}] [--reverse|--no-reverse] [--album-max N] [--api-id API_ID] [--api-hash API_HASH] [--session SESSION] [--target TARGET] [--caption CAPTION] [--parse-mode {plain,md}] [--concurrency-album N] [--threads N] [--strict-metadata|--no-strict-metadata] [--image-mode {auto,photo,document}] [--video-thumbnail {auto,off}] [--state STATE] [--artifacts-dir DIR] [--resume|--no-resume] [--maintenance|--no-maintenance] [--cleanup-now] [--duplicate {skip,ask,upload}] [--force-multi-command] [--no-progress] [--plan] [--plan-files]
 ```
 
 常用参数：
@@ -116,6 +133,7 @@ tgup run [--config CONFIG] [--src SRC] [--recursive|--no-recursive] [--follow-sy
 - `--target`: 默认 `me`
 - `--parse-mode`: `plain`（默认）或 `md`
 - `--concurrency-album`: album 并发数，默认 `5`
+- `--threads`: 单文件并行分片上传线程数，默认 `8`（分片大小固定 512 KB）
 - `--strict-metadata`: 视频元数据异常时拒绝上传该 album（默认关闭）
 - `--image-mode`: 图片发送策略，默认 `auto`
 - `--video-thumbnail`: 视频封面策略，默认 `auto`
@@ -128,7 +146,7 @@ tgup run [--config CONFIG] [--src SRC] [--recursive|--no-recursive] [--follow-sy
 - `--plan`: 上传前先打印计划（简版）
 - `--plan-files`: 计划中包含文件名
 
-### 6.5 `mcp`
+### 6.6 `mcp`
 
 ```bash
 tgup mcp serve [--config CONFIG] [--host HOST] [--port PORT] [--token TOKEN] [--allow-root PATH ...] [--control-db PATH] [--event-retention-hours HOURS] [--max-concurrent-jobs N] [--enable-sse|--no-enable-sse]
@@ -197,6 +215,7 @@ tgup run --src /path/to/media --force-multi-command
 - `TGUP_SESSION` / `TGUP_SESSION_PATH`（互斥，不能同时设置不同值）
 - `TGUP_STATE` / `TGUP_STATE_PATH`（互斥，不能同时设置不同值）
 - `TGUP_ARTIFACTS_DIR`
+- `TGUP_THREADS`
 
 维护配置：
 

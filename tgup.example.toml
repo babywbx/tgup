@@ -46,6 +46,8 @@ caption = ""
 parse_mode = "plain"
 # Concurrent album uploads, must be >= 1 (default: 5).
 concurrency_album = 5
+# Parallel part upload threads per file (default: 8). Part size is 512 KB.
+threads = 8
 # Reject albums with invalid video metadata during precheck (default: false).
 strict_metadata = false
 # Image upload policy: auto | photo | document (default: auto).
