@@ -24,6 +24,7 @@ func Default() Config {
 			Caption:          "",
 			ParseMode:        "plain",
 			ConcurrencyAlbum: 5,
+			Threads:          8,
 			Resume:           true,
 			StrictMetadata:   false,
 			ImageMode:        "auto",

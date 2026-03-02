@@ -144,9 +144,10 @@ func RunUpload(configPath string, cli config.Overlay, opts RunOptions) int {
 
 	// Connect to Telegram (after queue wait to avoid holding connection while waiting).
 	client := tg.NewGotdClient(tg.GotdConfig{
-		AppID:       cfg.Telegram.APIID,
-		AppHash:     cfg.Telegram.APIHash,
-		SessionPath: sessionPath,
+		AppID:         cfg.Telegram.APIID,
+		AppHash:       cfg.Telegram.APIHash,
+		SessionPath:   sessionPath,
+		UploadThreads: cfg.Upload.Threads,
 	})
 	if err := client.Connect(ctx); err != nil {
 		if coord != nil {

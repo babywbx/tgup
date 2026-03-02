@@ -44,6 +44,7 @@ type UploadOverlay struct {
 	Caption          *string `json:"caption,omitempty" toml:"caption"`
 	ParseMode        *string `json:"parse_mode,omitempty" toml:"parse_mode"`
 	ConcurrencyAlbum *int    `json:"concurrency_album,omitempty" toml:"concurrency_album"`
+	Threads          *int    `json:"threads,omitempty" toml:"threads"`
 	Resume           *bool   `json:"resume,omitempty" toml:"resume"`
 	StrictMetadata   *bool   `json:"strict_metadata,omitempty" toml:"strict_metadata"`
 	ImageMode        *string `json:"image_mode,omitempty" toml:"image_mode"`
@@ -164,6 +165,9 @@ func applyUpload(dst *UploadConfig, src UploadOverlay) {
 	}
 	if src.ConcurrencyAlbum != nil {
 		dst.ConcurrencyAlbum = *src.ConcurrencyAlbum
+	}
+	if src.Threads != nil {
+		dst.Threads = *src.Threads
 	}
 	if src.Resume != nil {
 		dst.Resume = *src.Resume

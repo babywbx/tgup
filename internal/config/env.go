@@ -65,6 +65,10 @@ func loadEnv(lookup lookupEnvFn) (Overlay, error) {
 	if err != nil {
 		return Overlay{}, err
 	}
+	ov.Upload.Threads, err = envIntAny(lookup, "TGUP_THREADS")
+	if err != nil {
+		return Overlay{}, err
+	}
 	ov.Upload.Resume, err = envBoolAny(lookup, "TGUP_RESUME")
 	if err != nil {
 		return Overlay{}, err

@@ -13,12 +13,13 @@ import (
 
 // GotdConfig holds configuration for the gotd Telegram client.
 type GotdConfig struct {
-	AppID       int
-	AppHash     string
-	SessionPath string
-	DeviceModel string
-	AppVersion  string
-	SystemInfo  string
+	AppID         int
+	AppHash       string
+	SessionPath   string
+	DeviceModel   string
+	AppVersion    string
+	SystemInfo    string
+	UploadThreads int // parallel part uploads per file (default 1)
 }
 
 // peerKey is a composite key for the peer cache to avoid collisions
@@ -134,13 +135,20 @@ func (c *GotdClient) getAPI() (*tdtg.Client, error) {
 	return c.api, nil
 }
 
+// maxPartSize is the largest chunk Telegram allows (512 KB).
+const maxPartSize = 512 * 1024
+
 // newUploader creates a fresh uploader instance (not shared, safe for WithProgress).
 func (c *GotdClient) newUploader() (*uploader.Uploader, error) {
 	api, err := c.getAPI()
 	if err != nil {
 		return nil, err
 	}
-	return uploader.NewUploader(api), nil
+	up := uploader.NewUploader(api).WithPartSize(maxPartSize)
+	if c.cfg.UploadThreads > 1 {
+		up = up.WithThreads(c.cfg.UploadThreads)
+	}
+	return up, nil
 }
 
 func (c *GotdClient) cachePeer(kind string, id int64, peer tdtg.InputPeerClass) {

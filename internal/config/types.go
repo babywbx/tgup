@@ -41,6 +41,7 @@ type UploadConfig struct {
 	Caption          string
 	ParseMode        string
 	ConcurrencyAlbum int
+	Threads          int
 	Resume           bool
 	StrictMetadata   bool
 	ImageMode        string
