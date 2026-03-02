@@ -26,8 +26,9 @@ func mapGotdError(err error) error {
 		return &FloodWaitError{Wait: dur}
 	}
 
-	// IMAGE_PROCESS_FAILED → our ImageProcessFailedError.
-	if tgerr.Is(err, "IMAGE_PROCESS_FAILED") {
+	// Photo-rejected errors → our ImageProcessFailedError.
+	// Triggers auto-fallback to document mode in sendWithRetry.
+	if tgerr.Is(err, "IMAGE_PROCESS_FAILED") || tgerr.Is(err, "PHOTO_SAVE_FILE_INVALID") {
 		return &ImageProcessFailedError{}
 	}
 
