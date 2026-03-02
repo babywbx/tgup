@@ -141,6 +141,10 @@ func (c *GotdClient) StartQRLogin(ctx context.Context) (QRLogin, error) {
 		case *tdtg.AuthLoginTokenMigrateTo:
 			// Previous QR scan triggered DC migration; complete it now.
 			if err := c.importLoginToken(ctx, r.DCID, r.Token); err != nil {
+				if errors.Is(err, ErrLoginPending) {
+					// Token imported but login not complete — retry.
+					continue
+				}
 				return QRLogin{}, err
 			}
 			return QRLogin{}, nil
@@ -215,6 +219,10 @@ func (c *GotdClient) WaitQRLogin(ctx context.Context, initial QRLogin, onRefresh
 
 		case *tdtg.AuthLoginTokenMigrateTo:
 			if err := c.importLoginToken(ctx, r.DCID, r.Token); err != nil {
+				if errors.Is(err, ErrLoginPending) {
+					// Token imported but login not complete — keep polling.
+					continue
+				}
 				return err
 			}
 			return nil
@@ -254,9 +262,9 @@ func (c *GotdClient) importLoginToken(ctx context.Context, dcID int, token []byt
 	case *tdtg.AuthLoginTokenSuccess:
 		return nil
 	case *tdtg.AuthLoginToken:
-		// Token accepted but not yet scanned — should not happen after
-		// importLoginToken, but handle gracefully.
-		return nil
+		// Token accepted on target DC but login not yet complete.
+		// Caller should continue polling rather than treating as success.
+		return ErrLoginPending
 	default:
 		return fmt.Errorf("unexpected import token result: %T", result)
 	}

@@ -61,17 +61,19 @@ func Login(configPath string, cli config.Overlay, opts LoginOptions) error {
 		return nil
 	}
 
+	sessionPath := cfg.Telegram.SessionPath
+
 	switch opts.Method {
 	case LoginMethodCode:
-		return loginWithCode(ctx, client, opts, stdout)
+		return loginWithCode(ctx, client, opts, stdout, sessionPath)
 	case LoginMethodQR:
-		return loginWithQR(ctx, client, stdout)
+		return loginWithQR(ctx, client, stdout, sessionPath)
 	default:
 		return fmt.Errorf("unknown login method: %d", opts.Method)
 	}
 }
 
-func loginWithCode(ctx context.Context, client *tg.GotdClient, opts LoginOptions, stdout io.Writer) error {
+func loginWithCode(ctx context.Context, client *tg.GotdClient, opts LoginOptions, stdout io.Writer, sessionPath string) error {
 	phone := opts.Phone
 	if phone == "" {
 		var err error
@@ -111,11 +113,11 @@ func loginWithCode(ctx context.Context, client *tg.GotdClient, opts LoginOptions
 		}
 	}
 
-	fmt.Fprintln(stdout, "ok")
+	fmt.Fprintf(stdout, "ok: session=%s\n", sessionPath)
 	return nil
 }
 
-func loginWithQR(ctx context.Context, client *tg.GotdClient, stdout io.Writer) error {
+func loginWithQR(ctx context.Context, client *tg.GotdClient, stdout io.Writer, sessionPath string) error {
 	qr, err := client.StartQRLogin(ctx)
 	if err != nil {
 		// StartQRLogin may return PasswordRequiredError when resuming
@@ -124,12 +126,12 @@ func loginWithQR(ctx context.Context, client *tg.GotdClient, stdout io.Writer) e
 		if !errors.As(err, &pwdErr) {
 			return fmt.Errorf("start QR login: %w", err)
 		}
-		return handle2FA(ctx, client, stdout)
+		return handle2FA(ctx, client, stdout, sessionPath)
 	}
 
 	// Empty URL means login already completed (e.g. DC migration succeeded).
 	if qr.URL == "" {
-		fmt.Fprintln(stdout, "ok")
+		fmt.Fprintf(stdout, "ok: session=%s\n", sessionPath)
 		return nil
 	}
 
@@ -146,14 +148,14 @@ func loginWithQR(ctx context.Context, client *tg.GotdClient, stdout io.Writer) e
 		if !errors.As(err, &pwdErr) {
 			return fmt.Errorf("QR login: %w", err)
 		}
-		return handle2FA(ctx, client, stdout)
+		return handle2FA(ctx, client, stdout, sessionPath)
 	}
 
-	fmt.Fprintln(stdout, "ok")
+	fmt.Fprintf(stdout, "ok: session=%s\n", sessionPath)
 	return nil
 }
 
-func handle2FA(ctx context.Context, client *tg.GotdClient, stdout io.Writer) error {
+func handle2FA(ctx context.Context, client *tg.GotdClient, stdout io.Writer, sessionPath string) error {
 	password, err := promptPassword("2FA password (input hidden): ")
 	if err != nil {
 		return fmt.Errorf("read password: %w", err)
@@ -161,7 +163,7 @@ func handle2FA(ctx context.Context, client *tg.GotdClient, stdout io.Writer) err
 	if err := client.SignInWithPassword(ctx, password); err != nil {
 		return fmt.Errorf("sign in with password: %w", err)
 	}
-	fmt.Fprintln(stdout, "ok")
+	fmt.Fprintf(stdout, "ok: session=%s\n", sessionPath)
 	return nil
 }
 

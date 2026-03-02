@@ -161,7 +161,7 @@ func RunUpload(configPath string, cli config.Overlay, opts RunOptions) int {
 		if coord != nil {
 			_ = coord.Finish(context.Background(), "failed")
 		}
-		fmt.Fprintln(stderr, "not authenticated: run 'tgup login' first")
+		fmt.Fprintf(stderr, "not authenticated (session=%s): run 'tgup login' first\n", sessionPath)
 		return 2
 	}
 

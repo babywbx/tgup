@@ -10,6 +10,9 @@ var (
 	ErrAuthRequired = errors.New("telegram auth required")
 	// ErrRetryable indicates a retryable transport failure.
 	ErrRetryable = errors.New("retryable transport error")
+	// ErrLoginPending indicates the login token was accepted but
+	// authentication is not yet complete (QR not scanned or similar).
+	ErrLoginPending = errors.New("login token accepted but auth not yet complete")
 )
 
 // FloodWaitError wraps a Telegram FLOOD_WAIT with the server-specified delay.
