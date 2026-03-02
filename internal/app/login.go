@@ -3,12 +3,12 @@ package app
 import (
 	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 
+	tdtg "github.com/gotd/td/tg"
 	qrcode "github.com/skip2/go-qrcode"
 
 	"github.com/babywbx/tgup/internal/config"
@@ -44,19 +44,18 @@ func Login(configPath string, cli config.Overlay, opts LoginOptions) error {
 		stdout = os.Stdout
 	}
 
-	client := tg.NewGotdClient(tg.GotdConfig{
+	tgCfg := tg.GotdConfig{
 		AppID:       cfg.Telegram.APIID,
 		AppHash:     cfg.Telegram.APIHash,
 		SessionPath: cfg.Telegram.SessionPath,
-	})
+	}
 
 	ctx := context.Background()
-	if err := client.Connect(ctx); err != nil {
-		return fmt.Errorf("connect: %w", err)
+	authorized, err := tg.IsSessionAuthorized(ctx, tgCfg)
+	if err != nil {
+		return fmt.Errorf("check auth: %w", err)
 	}
-	defer client.Close(ctx)
-
-	if client.IsAuthenticated(ctx) {
+	if authorized {
 		fmt.Fprintf(stdout, "already authorized: session=%s\n", cfg.Telegram.SessionPath)
 		return nil
 	}
@@ -65,15 +64,15 @@ func Login(configPath string, cli config.Overlay, opts LoginOptions) error {
 
 	switch opts.Method {
 	case LoginMethodCode:
-		return loginWithCode(ctx, client, opts, stdout, sessionPath)
+		return loginWithCode(ctx, tgCfg, opts, stdout, sessionPath)
 	case LoginMethodQR:
-		return loginWithQR(ctx, client, stdout, sessionPath)
+		return loginWithQR(ctx, tgCfg, stdout, sessionPath)
 	default:
 		return fmt.Errorf("unknown login method: %d", opts.Method)
 	}
 }
 
-func loginWithCode(ctx context.Context, client *tg.GotdClient, opts LoginOptions, stdout io.Writer, sessionPath string) error {
+func loginWithCode(ctx context.Context, tgCfg tg.GotdConfig, opts LoginOptions, stdout io.Writer, sessionPath string) error {
 	phone := opts.Phone
 	if phone == "" {
 		var err error
@@ -87,82 +86,53 @@ func loginWithCode(ctx context.Context, client *tg.GotdClient, opts LoginOptions
 		return fmt.Errorf("phone number is required")
 	}
 
-	if err := client.SendCode(ctx, phone); err != nil {
-		return fmt.Errorf("send code: %w", err)
-	}
-
-	code, err := promptLine("code: ")
-	if err != nil {
-		return fmt.Errorf("read code: %w", err)
-	}
-	code = strings.TrimSpace(code)
-
-	err = client.SignInWithCode(ctx, phone, code)
-	if err != nil {
-		var pwdErr *tg.PasswordRequiredError
-		if !errors.As(err, &pwdErr) {
-			return fmt.Errorf("sign in: %w", err)
-		}
-		// 2FA password required.
-		password, err := promptPassword("2FA password (input hidden): ")
-		if err != nil {
-			return fmt.Errorf("read password: %w", err)
-		}
-		if err := client.SignInWithPassword(ctx, password); err != nil {
-			return fmt.Errorf("sign in with password: %w", err)
-		}
+	if err := tg.LoginWithCode(ctx, tgCfg, tg.CodeLoginOptions{
+		Phone: phone,
+		Code: func(_ context.Context, _ *tdtg.AuthSentCode) (string, error) {
+			code, err := promptLine("code: ")
+			if err != nil {
+				return "", fmt.Errorf("read code: %w", err)
+			}
+			return strings.TrimSpace(code), nil
+		},
+		Password: func(context.Context) (string, error) {
+			pw, err := promptPassword("2FA password (input hidden): ")
+			if err != nil {
+				return "", fmt.Errorf("read password: %w", err)
+			}
+			return pw, nil
+		},
+	}); err != nil {
+		return fmt.Errorf("sign in: %w", err)
 	}
 
 	fmt.Fprintf(stdout, "ok: session=%s\n", sessionPath)
 	return nil
 }
 
-func loginWithQR(ctx context.Context, client *tg.GotdClient, stdout io.Writer, sessionPath string) error {
-	qr, err := client.StartQRLogin(ctx)
-	if err != nil {
-		// StartQRLogin may return PasswordRequiredError when resuming
-		// a previous DC-migrated QR scan that requires 2FA.
-		var pwdErr *tg.PasswordRequiredError
-		if !errors.As(err, &pwdErr) {
-			return fmt.Errorf("start QR login: %w", err)
-		}
-		return handle2FA(ctx, client, stdout, sessionPath)
+func loginWithQR(ctx context.Context, tgCfg tg.GotdConfig, stdout io.Writer, sessionPath string) error {
+	printed := false
+	if err := tg.LoginWithQR(ctx, tgCfg, tg.QRLoginOptions{
+		Show: func(_ context.Context, url string) error {
+			if printed {
+				fmt.Fprintln(stdout, "\nQR code expired, refreshing...")
+			}
+			printed = true
+			printQR(stdout, url)
+			fmt.Fprintln(stdout, "waiting for QR login...")
+			return nil
+		},
+		Password: func(context.Context) (string, error) {
+			pw, err := promptPassword("2FA password (input hidden): ")
+			if err != nil {
+				return "", fmt.Errorf("read password: %w", err)
+			}
+			return pw, nil
+		},
+	}); err != nil {
+		return fmt.Errorf("QR login: %w", err)
 	}
 
-	// Empty URL means login already completed (e.g. DC migration succeeded).
-	if qr.URL == "" {
-		fmt.Fprintf(stdout, "ok: session=%s\n", sessionPath)
-		return nil
-	}
-
-	printQR(stdout, qr.URL)
-	fmt.Fprintln(stdout, "waiting for QR login...")
-
-	err = client.WaitQRLogin(ctx, qr, func(newQR tg.QRLogin) {
-		fmt.Fprintln(stdout, "\nQR code expired, refreshing...")
-		printQR(stdout, newQR.URL)
-		fmt.Fprintln(stdout, "waiting for QR login...")
-	})
-	if err != nil {
-		var pwdErr *tg.PasswordRequiredError
-		if !errors.As(err, &pwdErr) {
-			return fmt.Errorf("QR login: %w", err)
-		}
-		return handle2FA(ctx, client, stdout, sessionPath)
-	}
-
-	fmt.Fprintf(stdout, "ok: session=%s\n", sessionPath)
-	return nil
-}
-
-func handle2FA(ctx context.Context, client *tg.GotdClient, stdout io.Writer, sessionPath string) error {
-	password, err := promptPassword("2FA password (input hidden): ")
-	if err != nil {
-		return fmt.Errorf("read password: %w", err)
-	}
-	if err := client.SignInWithPassword(ctx, password); err != nil {
-		return fmt.Errorf("sign in with password: %w", err)
-	}
 	fmt.Fprintf(stdout, "ok: session=%s\n", sessionPath)
 	return nil
 }
@@ -180,7 +150,6 @@ func printQR(w io.Writer, url string) {
 }
 
 func redactQRURL(url string) string {
-	// Redact the token parameter value in tg://login?token=...
 	const prefix = "tg://login?token="
 	if strings.HasPrefix(url, prefix) {
 		token := url[len(prefix):]

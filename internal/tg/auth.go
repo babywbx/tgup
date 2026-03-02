@@ -1,21 +1,30 @@
 package tg
 
-import "context"
+import (
+	"context"
 
-// AuthService contains Telegram login operations.
-type AuthService interface {
-	SendCode(ctx context.Context, phone string) error
-	SignInWithCode(ctx context.Context, phone, code string) error
-	SignInWithPassword(ctx context.Context, password string) error
-	StartQRLogin(ctx context.Context) (QRLogin, error)
-	// WaitQRLogin polls until the QR code is scanned. When the server issues
-	// a fresh token (previous one expired), onRefresh is called so the caller
-	// can re-render the QR code.
-	WaitQRLogin(ctx context.Context, initial QRLogin, onRefresh func(QRLogin)) error
+	tdtg "github.com/gotd/td/tg"
+)
+
+// CodePrompt asks the user for the Telegram verification code.
+type CodePrompt func(ctx context.Context, sentCode *tdtg.AuthSentCode) (string, error)
+
+// PasswordPrompt asks the user for the 2FA password.
+type PasswordPrompt func(ctx context.Context) (string, error)
+
+// QRShowFunc renders a QR login URL for the user.
+// Called each time a new token is exported (initial + refreshes on expiry).
+type QRShowFunc func(ctx context.Context, url string) error
+
+// CodeLoginOptions configures phone+code login.
+type CodeLoginOptions struct {
+	Phone    string
+	Code     CodePrompt
+	Password PasswordPrompt // optional; used only when 2FA is required
 }
 
-// QRLogin is an app-owned QR login payload.
-type QRLogin struct {
-	URL   string
-	token []byte // raw token bytes for change detection
+// QRLoginOptions configures QR login.
+type QRLoginOptions struct {
+	Show     QRShowFunc
+	Password PasswordPrompt // optional; used only when 2FA is required
 }

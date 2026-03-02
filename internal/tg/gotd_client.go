@@ -37,14 +37,6 @@ type GotdClient struct {
 	peerMu    sync.RWMutex
 	peerCache map[peerKey]tdtg.InputPeerClass
 
-	// Auth state (used between SendCode and SignInWithCode).
-	phoneCodeHash string
-
-	// Migrated DC connection for QR login DC migration.
-	// When set, auth calls (SignInWithPassword) use this instead of c.api.
-	authAPI     *tdtg.Client
-	authCleanup func()
-
 	ready    chan struct{}
 	stop     context.CancelFunc
 	done     chan error
@@ -52,22 +44,26 @@ type GotdClient struct {
 	closed   sync.Once
 }
 
-// NewGotdClient creates a new gotd-based Telegram client.
-func NewGotdClient(cfg GotdConfig) *GotdClient {
+// gotdDeviceConfig returns the DeviceConfig for gotd from our config.
+func gotdDeviceConfig(cfg GotdConfig) telegram.DeviceConfig {
 	device := cfg.DeviceModel
 	if device == "" {
 		device = "tgup"
 	}
+	return telegram.DeviceConfig{
+		DeviceModel:   device,
+		AppVersion:    cfg.AppVersion,
+		SystemVersion: cfg.SystemInfo,
+	}
+}
 
+// NewGotdClient creates a new gotd-based Telegram client.
+func NewGotdClient(cfg GotdConfig) *GotdClient {
 	sessionStore := &FileSessionStore{Path: cfg.SessionPath}
 	client := telegram.NewClient(cfg.AppID, cfg.AppHash, telegram.Options{
 		SessionStorage: sessionStore,
-		Device: telegram.DeviceConfig{
-			DeviceModel:   device,
-			AppVersion:    cfg.AppVersion,
-			SystemVersion: cfg.SystemInfo,
-		},
-		NoUpdates: true,
+		Device:         gotdDeviceConfig(cfg),
+		NoUpdates:      true,
 	})
 
 	return &GotdClient{
@@ -107,9 +103,6 @@ func (c *GotdClient) Connect(ctx context.Context) error {
 // Close shuts down the MTProto connection. Safe to call multiple times.
 func (c *GotdClient) Close(ctx context.Context) error {
 	c.closed.Do(func() {
-		if c.authCleanup != nil {
-			c.authCleanup()
-		}
 		if c.stop != nil {
 			c.stop()
 		}
@@ -139,15 +132,6 @@ func (c *GotdClient) getAPI() (*tdtg.Client, error) {
 		return nil, fmt.Errorf("client not connected: call Connect first")
 	}
 	return c.api, nil
-}
-
-// getAuthAPI returns the DC-migrated API if set, otherwise the default API.
-// Used for auth calls that must target the correct DC after QR login migration.
-func (c *GotdClient) getAuthAPI() (*tdtg.Client, error) {
-	if c.authAPI != nil {
-		return c.authAPI, nil
-	}
-	return c.getAPI()
 }
 
 // newUploader creates a fresh uploader instance (not shared, safe for WithProgress).
