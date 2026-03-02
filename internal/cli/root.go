@@ -33,6 +33,8 @@ func Run(args []string, stdout io.Writer, stderr io.Writer) int {
 		return runLogin(args[1:], stdout, stderr)
 	case "run":
 		return runRun(args[1:], stdout, stderr)
+	case "demo":
+		return runDemo(args[1:], stdout, stderr)
 	case "mcp":
 		return runMCP(args[1:], stdout, stderr)
 	case "version", "-v", "--version":
@@ -56,6 +58,7 @@ func printUsage(w io.Writer) {
 		"  login",
 		"  dry-run",
 		"  run",
+		"  demo",
 		"  mcp serve",
 		"  mcp schema",
 		"  version",
