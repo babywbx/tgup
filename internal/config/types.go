@@ -42,6 +42,7 @@ type UploadConfig struct {
 	ParseMode        string
 	ConcurrencyAlbum int
 	Threads          int
+	PoolSize         int
 	Resume           bool
 	StrictMetadata   bool
 	ImageMode        string

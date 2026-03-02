@@ -20,6 +20,7 @@ type GotdConfig struct {
 	AppVersion    string
 	SystemInfo    string
 	UploadThreads int // parallel part uploads per file (default 1)
+	PoolSize      int // DC connection pool size (0 = disabled)
 }
 
 // peerKey is a composite key for the peer cache to avoid collisions
@@ -34,6 +35,9 @@ type GotdClient struct {
 	telegram *telegram.Client
 	api      *tdtg.Client
 	cfg      GotdConfig
+
+	uploadPool telegram.CloseInvoker // pool handle, for Close()
+	poolAPI    *tdtg.Client          // pool-backed API for uploads
 
 	peerMu    sync.RWMutex
 	peerCache map[peerKey]tdtg.InputPeerClass
@@ -92,6 +96,15 @@ func (c *GotdClient) Connect(ctx context.Context) error {
 
 	select {
 	case <-c.ready:
+		if c.cfg.PoolSize > 0 {
+			pool, err := c.telegram.Pool(int64(c.cfg.PoolSize))
+			if err != nil {
+				cancel()
+				return fmt.Errorf("pool: %w", err)
+			}
+			c.uploadPool = pool
+			c.poolAPI = tdtg.NewClient(pool)
+		}
 		return nil
 	case err := <-c.done:
 		return fmt.Errorf("connect: %w", err)
@@ -104,6 +117,9 @@ func (c *GotdClient) Connect(ctx context.Context) error {
 // Close shuts down the MTProto connection. Safe to call multiple times.
 func (c *GotdClient) Close(ctx context.Context) error {
 	c.closed.Do(func() {
+		if c.uploadPool != nil {
+			_ = c.uploadPool.Close()
+		}
 		if c.stop != nil {
 			c.stop()
 		}
@@ -144,7 +160,14 @@ func (c *GotdClient) newUploader() (*uploader.Uploader, error) {
 	if err != nil {
 		return nil, err
 	}
-	up := uploader.NewUploader(api).WithPartSize(maxPartSize)
+	// Use pool-backed API for uploads when available.
+	var rpc uploader.Client
+	if c.poolAPI != nil {
+		rpc = c.poolAPI
+	} else {
+		rpc = api
+	}
+	up := uploader.NewUploader(rpc).WithPartSize(maxPartSize)
 	if c.cfg.UploadThreads > 1 {
 		up = up.WithThreads(c.cfg.UploadThreads)
 	}

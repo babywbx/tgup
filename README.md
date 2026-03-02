@@ -24,6 +24,7 @@ License: Apache-2.0
 | 分组与切片 | 按父目录分组，按 10 切片 | `--order` `--reverse` `--album-max` | Telegram album 上限 10 |
 | 上传并发 | album 级并发 5 | `--concurrency-album` | 并发单位是 album，不是单文件 |
 | 分片并行 | 单文件 8 线程并行上传 | `--threads` | 512 KB 分片 + 多线程并行，加速大文件 |
+| DC 连接池 | 8 条 MTProto 并行连接 | `--pool-size` | 多连接分散上传分片，突破单连接带宽上限 |
 | 断点续传 | 默认开启 | `--resume/--no-resume` | 以 `path + size + mtime_ns` 识别是否已发送 |
 | 重复文件策略 | `ask` | `--duplicate {skip,ask,upload}` | 仅在 `resume` 开启时生效 |
 | 多命令协调 | 同一 state FIFO 排队 | 默认模式 | 跨进程共享 SQLite `run_queue` |
@@ -125,7 +126,7 @@ tgup dry-run [--config CONFIG] [--src SRC] [--recursive|--no-recursive] [--follo
 ### 6.5 `run`
 
 ```bash
-tgup run [--config CONFIG] [--src SRC] [--recursive|--no-recursive] [--follow-symlinks|--no-follow-symlinks] [--include-ext CSV] [--exclude-ext CSV] [--order {name,mtime,size,random}] [--reverse|--no-reverse] [--album-max N] [--api-id API_ID] [--api-hash API_HASH] [--session SESSION] [--target TARGET] [--caption CAPTION] [--parse-mode {plain,md}] [--concurrency-album N] [--threads N] [--strict-metadata|--no-strict-metadata] [--image-mode {auto,photo,document}] [--video-thumbnail {auto,off}] [--state STATE] [--artifacts-dir DIR] [--resume|--no-resume] [--maintenance|--no-maintenance] [--cleanup-now] [--duplicate {skip,ask,upload}] [--force-multi-command] [--no-progress] [--plan] [--plan-files]
+tgup run [--config CONFIG] [--src SRC] [--recursive|--no-recursive] [--follow-symlinks|--no-follow-symlinks] [--include-ext CSV] [--exclude-ext CSV] [--order {name,mtime,size,random}] [--reverse|--no-reverse] [--album-max N] [--api-id API_ID] [--api-hash API_HASH] [--session SESSION] [--target TARGET] [--caption CAPTION] [--parse-mode {plain,md}] [--concurrency-album N] [--threads N] [--pool-size N] [--strict-metadata|--no-strict-metadata] [--image-mode {auto,photo,document}] [--video-thumbnail {auto,off}] [--state STATE] [--artifacts-dir DIR] [--resume|--no-resume] [--maintenance|--no-maintenance] [--cleanup-now] [--duplicate {skip,ask,upload}] [--force-multi-command] [--no-progress] [--plan] [--plan-files]
 ```
 
 常用参数：
@@ -134,6 +135,7 @@ tgup run [--config CONFIG] [--src SRC] [--recursive|--no-recursive] [--follow-sy
 - `--parse-mode`: `plain`（默认）或 `md`
 - `--concurrency-album`: album 并发数，默认 `5`
 - `--threads`: 单文件并行分片上传线程数，默认 `8`（分片大小固定 512 KB）
+- `--pool-size`: DC 连接池大小（多 MTProto 连接并行上传），默认 `8`（`0` 禁用）
 - `--strict-metadata`: 视频元数据异常时拒绝上传该 album（默认关闭）
 - `--image-mode`: 图片发送策略，默认 `auto`
 - `--video-thumbnail`: 视频封面策略，默认 `auto`
@@ -216,6 +218,7 @@ tgup run --src /path/to/media --force-multi-command
 - `TGUP_STATE` / `TGUP_STATE_PATH`（互斥，不能同时设置不同值）
 - `TGUP_ARTIFACTS_DIR`
 - `TGUP_THREADS`
+- `TGUP_POOL_SIZE`
 
 维护配置：
 

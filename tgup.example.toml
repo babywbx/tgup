@@ -48,6 +48,8 @@ parse_mode = "plain"
 concurrency_album = 5
 # Parallel part upload threads per file (default: 8). Part size is 512 KB.
 threads = 8
+# DC connection pool size — multiple MTProto connections for upload parallelism (default: 8, 0=disabled).
+pool_size = 8
 # Reject albums with invalid video metadata during precheck (default: false).
 strict_metadata = false
 # Image upload policy: auto | photo | document (default: auto).

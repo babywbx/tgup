@@ -69,6 +69,10 @@ func loadEnv(lookup lookupEnvFn) (Overlay, error) {
 	if err != nil {
 		return Overlay{}, err
 	}
+	ov.Upload.PoolSize, err = envIntAny(lookup, "TGUP_POOL_SIZE")
+	if err != nil {
+		return Overlay{}, err
+	}
 	ov.Upload.Resume, err = envBoolAny(lookup, "TGUP_RESUME")
 	if err != nil {
 		return Overlay{}, err

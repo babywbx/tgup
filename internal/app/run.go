@@ -148,6 +148,7 @@ func RunUpload(configPath string, cli config.Overlay, opts RunOptions) int {
 		AppHash:       cfg.Telegram.APIHash,
 		SessionPath:   sessionPath,
 		UploadThreads: cfg.Upload.Threads,
+		PoolSize:      cfg.Upload.PoolSize,
 	})
 	if err := client.Connect(ctx); err != nil {
 		if coord != nil {

@@ -56,6 +56,7 @@
 | `upload.parse_mode` | caption 解析模式 | `plain/md`，默认 `plain` |
 | `upload.concurrency_album` | album 级并发数 | `>=1`，默认 `5` |
 | `upload.threads` | 单文件并行分片上传线程数 | `>=1`，默认 `8`，分片 512 KB |
+| `upload.pool_size` | DC 连接池大小（多 MTProto 连接） | `>=0`，默认 `8`，`0` 禁用 |
 | `upload.strict_metadata` | 视频元数据异常时是否拒绝 | 默认 `false` |
 | `upload.image_mode` | 图片发送策略 | `auto/photo/document`，默认 `auto` |
 | `upload.video_thumbnail` | 视频封面策略 | `auto/off`，默认 `auto` |

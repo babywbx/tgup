@@ -53,6 +53,7 @@ func runRun(args []string, stdout io.Writer, stderr io.Writer) int {
 	albumMax := &intValue{}
 	concurrencyAlbum := &intValue{}
 	threads := &intValue{}
+	poolSize := &intValue{}
 	apiID := &intValue{}
 	apiHash := &stringValue{}
 
@@ -82,6 +83,7 @@ func runRun(args []string, stdout io.Writer, stderr io.Writer) int {
 	fs.Var(albumMax, "album-max", "max media per album")
 	fs.Var(concurrencyAlbum, "concurrency-album", "album concurrency")
 	fs.Var(threads, "threads", "parallel part uploads per file")
+	fs.Var(poolSize, "pool-size", "DC connection pool size (0=disabled)")
 	fs.Var(apiID, "api-id", "telegram api id")
 
 	if err := fs.Parse(args); err != nil {
@@ -173,6 +175,9 @@ func runRun(args []string, stdout io.Writer, stderr io.Writer) int {
 	}
 	if threads.set {
 		cli.Upload.Threads = threads.ptr()
+	}
+	if poolSize.set {
+		cli.Upload.PoolSize = poolSize.ptr()
 	}
 	if apiID.set {
 		cli.Telegram.APIID = apiID.ptr()
