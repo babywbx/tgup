@@ -2,13 +2,10 @@ package upload
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"math/rand"
 	"strings"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/babywbx/tgup/internal/media"
 	"github.com/babywbx/tgup/internal/plan"
@@ -17,11 +14,9 @@ import (
 	"github.com/babywbx/tgup/internal/tg"
 )
 
-const (
-	maxRetries    = 5
-	maxFloodWaits = 20
-	maxBackoff    = 60 * time.Second
-)
+// maxImageRetries limits how many times we switch from photo to document mode
+// on IMAGE_PROCESS_FAILED before giving up.
+const maxImageRetries = 1
 
 // Run executes the full upload pipeline: precheck, send, postcheck, state mark.
 func Run(ctx context.Context, in Input) (Summary, error) {
@@ -285,64 +280,26 @@ func processAlbum(ctx context.Context, ia indexedAlbum, args processArgs) {
 	emitProgress(in, args, "")
 }
 
+// sendWithRetry handles only business-level retries (ImageProcessFailed fallback).
+// Transport-level errors (FloodWait, network, transient RPC) are handled by
+// gotd middlewares injected in NewGotdClient.
 func sendWithRetry(ctx context.Context, in Input, files []AlbumFile, target tg.ResolvedTarget) (tg.SendResult, error) {
 	imageMode := strings.ToLower(strings.TrimSpace(in.Config.ImageMode))
 	forceDocument := imageMode == "document"
-	retryAttempt := 0
-	floodWaitCount := 0
+	imageRetries := 0
 
 	for {
-		if ctx.Err() != nil {
-			return tg.SendResult{}, ctx.Err()
-		}
-
 		result, err := sendAlbumOnce(ctx, in, files, target, forceDocument)
 		if err == nil {
 			return result, nil
 		}
-		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-			return tg.SendResult{}, err
-		}
-
-		// ImageProcessFailed → retry as document (not counted as retry).
-		if tg.IsImageProcessFailed(err) && !forceDocument && imageMode == "auto" {
+		// ImageProcessFailed → switch to document mode once.
+		if tg.IsImageProcessFailed(err) && !forceDocument && imageMode == "auto" && imageRetries < maxImageRetries {
 			forceDocument = true
+			imageRetries++
 			continue
 		}
-
-		// FloodWait → sleep exact duration (not counted as retry).
-		if d := tg.FloodWaitDuration(err); d > 0 {
-			floodWaitCount++
-			if floodWaitCount > maxFloodWaits {
-				return tg.SendResult{}, fmt.Errorf("too many flood waits: %w", err)
-			}
-			timer := time.NewTimer(d + time.Second)
-			select {
-			case <-ctx.Done():
-				timer.Stop()
-				return tg.SendResult{}, ctx.Err()
-			case <-timer.C:
-			}
-			continue
-		}
-
-		// Retryable errors → backoff.
-		if !tg.IsRetryable(err) {
-			return tg.SendResult{}, err
-		}
-		if retryAttempt >= maxRetries {
-			return tg.SendResult{}, fmt.Errorf("max retries exceeded: %w", err)
-		}
-
-		delay := backoffWithJitter(retryAttempt)
-		retryAttempt++
-		timer := time.NewTimer(delay)
-		select {
-		case <-ctx.Done():
-			timer.Stop()
-			return tg.SendResult{}, ctx.Err()
-		case <-timer.C:
-		}
+		return tg.SendResult{}, err
 	}
 }
 
@@ -394,14 +351,6 @@ func videoMetaFromFile(f AlbumFile) *tg.VideoMeta {
 		Width:    f.Metadata.Width,
 		Height:   f.Metadata.Height,
 	}
-}
-
-func backoffWithJitter(attempt int) time.Duration {
-	delay := Backoff(attempt)
-	if delay > maxBackoff {
-		delay = maxBackoff
-	}
-	return time.Duration(float64(delay) * (0.5 + rand.Float64()*0.5))
 }
 
 func toAlbumFiles(items []scan.Item) []AlbumFile {

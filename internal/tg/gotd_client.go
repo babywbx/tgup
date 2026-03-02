@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/gotd/td/telegram"
 	"github.com/gotd/td/telegram/uploader"
@@ -69,6 +70,11 @@ func NewGotdClient(cfg GotdConfig) *GotdClient {
 		SessionStorage: sessionStore,
 		Device:         gotdDeviceConfig(cfg),
 		NoUpdates:      true,
+		Middlewares: []telegram.Middleware{
+			NewRecoveryMiddleware(5 * time.Minute),
+			NewRetryMiddleware(5),
+			NewFloodWaitMiddleware(20, 15*time.Minute),
+		},
 	})
 
 	return &GotdClient{
